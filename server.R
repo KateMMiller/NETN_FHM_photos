@@ -68,7 +68,7 @@ shiny_server <- function(session, input, output){
           lng = plots$Longitude,
           lat = plots$Latitude,
           layerId = plots$Plot_Name, 
-          label = if(input$forestMap_zoom > 14) substr(plots$Plot_Name, 6, 9) else NULL,
+          label = if(input$forestMap_zoom > 12) substr(plots$Plot_Name, 6, 9) else NULL,
           labelOptions = labelOptions(noHide = TRUE, 
                                       textOnly = TRUE, 
                                       direction = "bottom", 
@@ -148,7 +148,12 @@ shiny_server <- function(session, input, output){
    park_plots <- plots %>% filter(Unit_Code %in% input$park) %>% select(Plot_Name) %>% unique()
    
 
-   zoom_level <- ifelse(input$park == "ACAD", 9.5, 12.5)
+   zoom_level <- case_when(input$park == "ACAD" ~ 9.5,
+                         input$park == "MORR" ~ 13,
+                           input$park %in% c("MIMA") ~ 13.5,
+                           input$park == "MABI" ~ 14,
+                           input$park %in% c("SAGA", "WEFA") ~ 15,
+                           TRUE ~ 12.5)
    
    updateSelectizeInput(session, 'plot',
                         choices = c("Choose a plot" = "", park_plots$Plot_Name))
@@ -197,7 +202,7 @@ shiny_server <- function(session, input, output){
       setView(
         lng =  plot_selected$Longitude,
         lat = plot_selected$Latitude,
-        zoom = 14)
+        zoom = 16)
 
   })
     
@@ -206,7 +211,7 @@ shiny_server <- function(session, input, output){
       MarkerClick <- input$forestMap_marker_click
       plot_click <- plots[plots$Plot_Name == MarkerClick$id, ]
 
-      plots_park <- plot_click %>% filter(Unit_Code %in% input$park) %>% unique()
+      plots_park <- plots %>% filter(Unit_Code %in% input$park) %>% select(Plot_Name) %>% unique()
       
       tempdata <- plot_click %>% select(Plot_Name, Longitude, Latitude, Panel, 
                                         Num_Live_Trees, Num_Dead_Trees, Inv_Shrub_Cover, 
@@ -264,7 +269,7 @@ shiny_server <- function(session, input, output){
         setView(
           lng =  tempdata$Longitude,
           lat = tempdata$Latitude,
-          zoom = 14) %>% 
+          zoom = 16) %>% 
         addPopups(
           lng = tempdata$Longitude,
           lat = tempdata$Latitude,
