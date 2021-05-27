@@ -30,15 +30,15 @@ shinyUI(
     title = HTML(
       "<div> <a class='alignbottom' 'href='https://www.nps.gov/im/netn/'> 
              <img class='aligncenter' src='AH_small.jpg', 
-             alt='NETN Forest Photopoint Viewer'></a>
-      NETN FHM Photopoint Viewer</div>"
+             alt='NETN Forest Plot Snapshots'></a>
+      NETN Forest Plot Snapshots</div>"
     ),
     position = "static-top", 
     inverse = TRUE, 
     collapsible = FALSE, 
     fluid = TRUE,
     theme="https://www.nps.gov/lib/bootstrap/3.3.2/css/nps-bootstrap.min.css",
-    windowTitle = "NETN FHM Photopoint Viewer", 
+    windowTitle = "NETN Forest Plot Snapshots", 
     id = "MainNavBar",
     
     #--------------------------------------------------------------
@@ -67,13 +67,17 @@ shinyUI(
                             style = 'padding:0 1px 1px 3px',
                             uiOutput("plot_df")
                             )
-               )
+               ),
+               tags$div(title = "Reset the Map",
+                        actionButton('reset_view', "Reset Map", 
+                                     style="color:white;background-color: #5F9EA0; 
+                         border-color:#436e70;font-size:11px"))
                ),
         
         column(10, style = "padding: 1px 20px 10px 5px", 
                tags$div(title = "Map of Forest Plots",
                         div(leafletOutput("forestMap", 
-                                          height = "425px")
+                                          height = "600px")
                         ))), 
         br(),
 
