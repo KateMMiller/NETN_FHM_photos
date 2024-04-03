@@ -18,6 +18,7 @@ to_ACAD = 2023
 from_NHP = 2019
 to_NHP = 2023
 
+# combine ACAD and NHPs
 plots1 <- rbind(joinLocEvent(park = "ACAD", from = from_ACAD, to = to_ACAD, output = 'verbose', locType = "all"),
                 joinLocEvent(park = NHPs, from = from_NHP, to = to_NHP, output = 'verbose', locType = "all")) |> 
   select(Plot_Name, Unit_Code = ParkUnit, Panel = PanelCode, Physio = PhysiographyLabel,  
