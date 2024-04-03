@@ -65,8 +65,8 @@ shiny_server <- function(session, input, output){
         addCircleMarkers(
           data = plots,
           radius = 4,
-          lng = plots$Longitude,
-          lat = plots$Latitude,
+          lng = plots$Long,
+          lat = plots$Lat,
           layerId = plots$Plot_Name, 
           label = if(input$forestMap_zoom > 12) substr(plots$Plot_Name, 6, 9) else NULL,
           labelOptions = labelOptions(noHide = TRUE, 
@@ -96,13 +96,13 @@ shiny_server <- function(session, input, output){
       clearControls() %>%
       #clearPopups() %>% 
       setView(
-        lng =  plot_selected$Longitude, 
-        lat = plot_selected$Latitude, 
+        lng =  plot_selected$Long, 
+        lat = plot_selected$Lat, 
         zoom = 16) 
     delay(400, leafletProxy("forestMap") %>% 
             addCircles(
-              lng = plot_selected$Longitude,
-              lat = plot_selected$Latitude,
+              lng = plot_selected$Long,
+              lat = plot_selected$Lat,
               layerId = substr(plot_selected$Plot_Name, 6, 9),
               group = 'pulse',
               radius = 19,
@@ -142,8 +142,8 @@ shiny_server <- function(session, input, output){
   observeEvent(input$park, {
    req(input$park)
    
-   park_coords <- plots %>% filter(Unit_Code %in% input$park) %>% summarize(long = mean(Longitude),
-                                                                            lat = mean(Latitude))  
+   park_coords <- plots %>% filter(Unit_Code %in% input$park) %>% summarize(long = mean(Long),
+                                                                            lat = mean(Lat))  
    
    park_plots <- plots %>% filter(Unit_Code %in% input$park) %>% select(Plot_Name) %>% unique()
    
@@ -200,8 +200,8 @@ shiny_server <- function(session, input, output){
       #clearControls() %>% 
       #clearPopups() %>% 
       setView(
-        lng =  plot_selected$Longitude,
-        lat = plot_selected$Latitude,
+        lng =  plot_selected$Long,
+        lat = plot_selected$Lat,
         zoom = 16)
 
   })
@@ -213,9 +213,10 @@ shiny_server <- function(session, input, output){
 
       plots_park <- plots %>% filter(Unit_Code %in% input$park) %>% select(Plot_Name) %>% unique()
       
-      tempdata <- plot_click %>% select(Plot_Name, Longitude, Latitude, Panel, 
-                                        Num_Live_Trees, Num_Dead_Trees, Inv_Shrub_Cover, 
-                                        Num_Seedlings, Num_Saplings, Num_Species, Location_Notes)
+      tempdata <- plot_click %>% select(Plot_Name, Long, Lat, Last_Sampled = SampleYear, Panel, Physio,
+                                        Num_Live_Trees, Num_Dead_Trees, Inv_Shrub_Cov, 
+                                        Num_Seedlings, Num_Saplings, Num_Quad_Species, 
+                                        Num_Add_Species, Location_Notes, Directions)
 
       content <- paste0("<div class='leaflet-popup-scrolled' style='max-width:600px;max-height:250px;'>",
                         "<b>", h4("Plot Info:"), "</b>",
@@ -226,8 +227,8 @@ shiny_server <- function(session, input, output){
                             mapply(FUN = function(Name, Value){
                               tags$tr(tags$td(sprintf("%s: ", Name)),
                                       tags$td(align = 'right', sprintf("%s", Value)))},
-                              Name = names(tempdata[,c(1, 4:11)]),
-                              Value = tempdata[,c(1, 4:11)],
+                              Name = names(tempdata[,c(1, 4:15)]),
+                              Value = tempdata[,c(1, 4:15)],
                               SIMPLIFY = FALSE)))), "</div>")
 
       
@@ -267,12 +268,12 @@ shiny_server <- function(session, input, output){
  
       leafletProxy('forestMap') %>% 
         setView(
-          lng =  tempdata$Longitude,
-          lat = tempdata$Latitude,
+          lng =  tempdata$Long,
+          lat = tempdata$Lat,
           zoom = 16) %>% 
         addPopups(
-          lng = tempdata$Longitude,
-          lat = tempdata$Latitude,
+          lng = tempdata$Long,
+          lat = tempdata$Lat,
           popup = content
         ) 
     })
