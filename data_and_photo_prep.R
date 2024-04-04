@@ -132,7 +132,6 @@ view_namer <- function(pname){
 # Function to resize and label each photo
 process_image <- function(import_name, export_name){
   title <- view_namer(pname = export_name)
-  cat(export_name, " ")
   img <- image_read(import_name)
   img2 <- image_border(img, 'black','6x6')
   img3 <- image_scale(img2, 'X600')
@@ -153,8 +152,8 @@ process_image <- function(import_name, export_name){
 num_photos <- nrow(name_df) #1587
 head(name_df)
 
-map2(name_df$full_name[1:500], name_df$photo_name[1:500], ~process_image(.x,.y))
-map2(name_df$full_name[501:1000], name_df$photo_name[501:1000], ~process_image(.x,.y))
-map2(name_df$full_name[1001:num_photos], name_df$photo_name[1001:num_photos], ~process_image(.x,.y))
+map2(name_df$full_name[1:500], name_df$photo_name[1:500], ~process_image(.x,.y), .progress = T)
+map2(name_df$full_name[501:1000], name_df$photo_name[501:1000], ~process_image(.x,.y), .progress = T)
+map2(name_df$full_name[1001:num_photos], name_df$photo_name[1001:num_photos], ~process_image(.x,.y), .progress = T)
 
-map2(name_df$full_name[1:2], name_df$photo_name[1:2], ~process_image(.x,.y))
+map2(name_df$full_name[1:2], name_df$photo_name[1:2], ~process_image(.x,.y), .progress = T)
