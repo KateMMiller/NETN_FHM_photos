@@ -9,19 +9,22 @@ library(tidyverse)
 library(magick)
 library(stringi)
 library(forestNETN)
+
 importData()
 
-#----- Compile data for the popups -----
+#----- Params updated every year -----
 NHPs <- c("MABI", "MIMA", "MORR", "ROVA", "SAGA", "SARA", "WEFA")
 from_ACAD = 2021
 to_ACAD = 2023
 from_NHP = 2019
 to_NHP = 2023
 
+#----- Compile data for the popups -----
 # combine ACAD and NHPs
 plots1 <- rbind(joinLocEvent(park = "ACAD", from = from_ACAD, to = to_ACAD, output = 'verbose', locType = "all"),
                 joinLocEvent(park = NHPs, from = from_NHP, to = to_NHP, output = 'verbose', locType = "all")) |> 
-  select(Plot_Name, Unit_Code = ParkUnit, Panel = PanelCode, Physio = PhysiographyLabel,  
+  mutate(Physio = paste0(PhysiographySummary, "- ", PhysiographyLabel)) |> 
+  select(Plot_Name, Unit_Code = ParkUnit, Panel = PanelCode, Physio,  
          Directions, Location_Notes = PlotNotes, SampleYear, Lat, Long, IsStuntedWoodland)
 
 trees <- rbind(joinTreeData(park = "ACAD", from = from_ACAD, to = to_ACAD, status = 'active', locType = "all"),
@@ -42,11 +45,11 @@ trees_sum <- trees |>
   pivot_wider(names_from = status, values_from = Num_Stems, values_fill = 0) |> 
   select(Plot_Name, Num_Live_Trees = live, Num_Dead_Trees = dead)
 
-inv_shrubs1 <- rbind(sumQuadGuilds(park = "ACAD", from = from_ACAD, to = to_ACAD, speciesType = "invasive", locType = "all"),
-                     sumQuadGuilds(park = NHPs, from = from_NHP, to = to_NHP, speciesType = "invasive", locType = "all"))
-
-inv_shrubs <- inv_shrubs1 |> filter(Group %in% "Tree") |> 
-  group_by(Plot_Name) |> summarize(Inv_Shrub_Cov = sum(quad_pct_cover))
+inv_shrubs <- rbind(joinMicroShrubData(park = "ACAD", from = from_ACAD, to = to_ACAD, 
+                                       speciesType = 'invasive', locType = 'all'),
+                    joinMicroShrubData(park = NHPs, from = from_NHP, to = to_NHP, 
+                                       speciesType = 'invasive', locType = 'all')) |> 
+  group_by(Plot_Name) |> summarize(Inv_Shrub_Cov = round(sum(shrub_avg_cov), 1))
 
 regen1 <- rbind(joinRegenData(park = "ACAD", from = from_ACAD, to = to_ACAD, locType = "all"),
                joinRegenData(park = NHPs, from = from_NHP, to = to_NHP, locType = "all"))
@@ -64,11 +67,11 @@ dfs <- list(plots1, trees_sum, inv_shrubs, regen, numspp)
 comb <- reduce(dfs, left_join, by = "Plot_Name")
 comb[,12:ncol(comb)][is.na(comb[,12:ncol(comb)])] <- 0
 
-#-----comb#----- Join sample data with photo info -----
+#----- Join sample data with photo info -----
 
 #----- Uncomment next 3 lines to remove previous set of photos -----
 # old_photos <- list.files("./www", pattern = "JPG$", full.names = T)
-# old_photos <- old_photos[!grepl("AH_small", old_photos)] 
+# old_photos <- old_photos[!grepl("AH_small", old_photos)]
 # file.remove(old_photos)
 table(plots1$Unit_Code, plots1$Panel) # correct number of plots
 
@@ -79,17 +82,17 @@ path21 <- paste0(path, 2021)
 path22 <- paste0(path, 2022)
 path23 <- paste0(path, 2023)
 
-photo_name1 <- list.files(c(path19, path21, path22, path23), 
-                            pattern = 'JPG$', full.names = F)
+full_names <- list.files(c(path19, path21, path22, path23), 
+                           pattern = 'JPG$', full.names = T)
+#full_names[1:10]
+name_df1 <- data.frame(full_name = full_names, 
+                       photo_name = substr(full_names, nchar(full_names) - 23, nchar(full_names)))
 
-full_names1 <- list.files(c(path19, path21, path22, path23), 
-                          pattern = 'JPG$', full.names = T)
+#drops <- c("ID", "RN", "UC")
+name_df <- name_df1[!grepl("ID|RN|UC|QAQC", name_df1$photo_name),]
 
-drops <- c("ID", "RN", "UC")
-photo_name <- photo_name1[!grepl("ID|RN|UC|QAQC", photo_name1)] #drop ID photos
-full_names <- full_names1[!grepl("ID|RN|UC|QAQC", full_names1)]
-
-photo_name_df <- data.frame(photo_name)  |>  
+photo_name_df <- #data.frame(photo_name)  |>  
+                 name_df |> 
                  mutate(plot_name = substr(photo_name, 1, 8),
                         scene = case_when(grepl("UR", photo_name) ~ "UR", 
                                           grepl("BR", photo_name) ~ "BR",
@@ -104,9 +107,8 @@ head(photo_name_df)
 
 photo_name_wide <- photo_name_df %>% spread(scene, photo_name) %>% select(-`<NA>`)
 photo_name_wide$Plot_Name <- sub("_", "-", photo_name_wide$plot_name)
-head(photo_name_wide)
+
 plots <- left_join(comb, photo_name_wide[,-1], by = "Plot_Name")
-head(plots)
 
 write.csv(plots, "./data/Plots.csv", row.names = FALSE)
 
@@ -148,7 +150,10 @@ process_image <- function(import_name, export_name){
 # process_image(import_name = full_names[40], export_name = photo_name[40])
 
 # Run through all photos. Can break into even smaller chunks of bogs down computer too much
-num_photos <- length(full_names) #1587
-map2(full_names[1:500], photo_name[1:500], ~process_image(.x,.y))
-map2(full_names[501:1000], photo_name[501:1000], ~process_image(.x,.y))
-map2(full_names[1001:num_photos], photo_name[1001:num_photos], ~process_image(.x,.y))
+num_photos <- nrow(name_df) #1587
+head(name_df)
+
+map2(name_df$full_name[1:500], name_df$photo_name[1:500], ~process_image(.x,.y))
+map2(name_df$full_name[501:1000], name_df$photo_name[501:1000], ~process_image(.x,.y))
+map2(name_df$full_name[1001:num_photos], name_df$photo_name[1001:num_photos], ~process_image(.x,.y))
+
