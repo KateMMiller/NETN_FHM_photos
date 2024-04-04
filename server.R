@@ -7,6 +7,12 @@ library(htmltools)
 
 shiny_server <- function(session, input, output){
   
+  observeEvent(input$view_about, {
+    showModal(modalDialog(
+    includeHTML("./www/About.html")
+    ))
+  })
+  
   output$plot_df <- renderUI({
     plots2 <- plots %>% filter(Unit_Code %in% input$park) %>% droplevels()
     selectizeInput(inputId = 'plot', 
@@ -15,7 +21,7 @@ shiny_server <- function(session, input, output){
   })
   
   
-  # Make NPS map Attribution
+  # NPS map urls
 
   NPSbasic = "https://atlas-stg.geoplatform.gov/styles/v1/atlas-user/ck58pyquo009v01p99xebegr9/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoiYXRsYXMtdXNlciIsImEiOiJjazFmdGx2bjQwMDAwMG5wZmYwbmJwbmE2In0.lWXK2UexpXuyVitesLdwUg"
   
@@ -68,12 +74,12 @@ shiny_server <- function(session, input, output){
           lng = plots$Long,
           lat = plots$Lat,
           layerId = plots$Plot_Name, 
-          label = if(input$forestMap_zoom > 12) substr(plots$Plot_Name, 6, 9) else NULL,
+          label = if(input$forestMap_zoom > 12) plots$plot_num else NULL,
           labelOptions = labelOptions(noHide = TRUE, 
                                       textOnly = TRUE, 
                                       direction = "bottom", 
                                       textsize = "11px"),
-          fillColor = "ForestGreen",
+          fillColor = "#33CB46",
           fillOpacity = 0.75,
           weight = 1,
           color = "DimGrey"
@@ -137,7 +143,6 @@ shiny_server <- function(session, input, output){
     
 
   })
-  
   
   observeEvent(input$park, {
    req(input$park)
