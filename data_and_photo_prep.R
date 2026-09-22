@@ -10,14 +10,15 @@ library(magick)
 library(stringi)
 library(forestNETN)
 
-importData()
+server_add <- read.csv('../server.csv')[1,]
+importData(instance = "server", server = server_add)
 
 #----- Params updated every year -----
 NHPs <- c("MABI", "MIMA", "MORR", "ROVA", "SAGA", "SARA", "WEFA")
-from_ACAD = 2021
-to_ACAD = 2023
-from_NHP = 2019
-to_NHP = 2023
+from_ACAD = 2023
+to_ACAD = 2026
+from_NHP = 2023
+to_NHP = 2026
 
 #----- Compile data for the popups -----
 # combine ACAD and NHPs
@@ -75,18 +76,24 @@ comb[,12:ncol(comb)][is.na(comb[,12:ncol(comb)])] <- 0
 # file.remove(old_photos)
 table(plots1$Unit_Code, plots1$Panel) # correct number of plots
 
-path <- c("Z:/PROJECTS/MONITORING/Forest_Health/5_Data/Photos/Photopoints/")
+# update to full path from NETN server
+path <- c("./Forest_Health/5_Data/Photos/Photopoints/")
 
-path19 <- paste0(path, 2019)
-path21 <- paste0(path, 2021)
-path22 <- paste0(path, 2022)
 path23 <- paste0(path, 2023)
+path24 <- paste0(path, 2024)
+path25 <- paste0(path, 2025)
+path26 <- paste0(path, 2026)
 
-full_names <- list.files(c(path19, path21, path22, path23), 
-                           pattern = 'JPG$', full.names = T)
+full_names <- list.files(c(path23, path24, path25, path26), 
+                           pattern = 'JPG$|jpeg$', full.names = T, ignore.case = T)
+
 #full_names[1:10]
 name_df1 <- data.frame(full_name = full_names, 
-                       photo_name = substr(full_names, nchar(full_names) - 23, nchar(full_names)))
+                       photo_name = 
+                         ifelse(grepl("JPG", full_names), 
+                           substr(full_names, nchar(full_names) - 23, nchar(full_names)),
+                           substr(full_names, nchar(full_names) - 24, nchar(full_names)))
+                       )
 
 #drops <- c("ID", "RN", "UC")
 name_df <- name_df1[!grepl("ID|RN|UC|QAQC", name_df1$photo_name),]
@@ -104,12 +111,15 @@ photo_name_df <- #data.frame(photo_name)  |>
                            .groups = 'drop')
 
 head(photo_name_df)
+head(photo_name_df)
 
-photo_name_wide <- photo_name_df %>% spread(scene, photo_name) %>% select(-`<NA>`)
+photo_name_wide <- photo_name_df  |>  pivot_wider(names_from = scene, values_from = photo_name) 
 photo_name_wide$Plot_Name <- sub("_", "-", photo_name_wide$plot_name)
 
 plots <- left_join(comb, photo_name_wide[,-1], by = "Plot_Name")
-
+head(plots)
+if(nrow(is.na(plots$BL)) > 0){warning("Some photos did not link properly to the dataset. Check that they 
+                                      are found on the Z drive and are formatted correctly.")}
 write.csv(plots, "./data/Plots.csv", row.names = FALSE)
 
 # Check for duplicate plot records (ie QAQC photopoints missing _QAQC in the file name)
@@ -149,11 +159,18 @@ process_image <- function(import_name, export_name){
 # process_image(import_name = full_names[40], export_name = photo_name[40])
 
 # Run through all photos. Can break into even smaller chunks of bogs down computer too much
-num_photos <- nrow(name_df) #1587
+num_photos <- nrow(name_df) #1408
 head(name_df)
 
 map2(name_df$full_name[1:500], name_df$photo_name[1:500], ~process_image(.x,.y), .progress = T)
 map2(name_df$full_name[501:1000], name_df$photo_name[501:1000], ~process_image(.x,.y), .progress = T)
 map2(name_df$full_name[1001:num_photos], name_df$photo_name[1001:num_photos], ~process_image(.x,.y), .progress = T)
+map2(name_df$full_name[c(20, 21, 22, 23, 299, 314)], name_df$photo_name[c(20, 21, 22, 23, 299, 314)], 
+     ~process_image(.x,.y), .progress = T)
 
-map2(name_df$full_name[1:2], name_df$photo_name[1:2], ~process_image(.x,.y), .progress = T)
+# Plots missed in the initial roundup
+name_df_miss <- name_df |> filter(grepl("ACAD_029|ACAD_057|ACAD_058|ACAD_059|ACAD_175", photo_name))
+map2(name_df_miss$full_name, name_df_miss$photo_name, ~process_image(.x, .y), .progress = T)
+
+name_df_miss2 <- name_df |> filter(grepl("WEFA_006|WEFA_007|WEFA_007|WEFA_009|WEFA_010", photo_name))
+map2(name_df_miss2$full_name, name_df_miss2$photo_name, ~process_image(.x, .y), .progress = T)

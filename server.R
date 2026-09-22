@@ -14,7 +14,7 @@ shiny_server <- function(session, input, output){
   })
   
   output$plot_df <- renderUI({
-    plots2 <- plots %>% filter(Unit_Code %in% input$park) %>% droplevels()
+    plots2 <- plots |> filter(Unit_Code %in% input$park)
     selectizeInput(inputId = 'plot', 
                    label = h5("Zoom to a plot"), 
                    choices = c("Choose a plot" = "", unique(plots$Plot_Name)))
@@ -22,42 +22,23 @@ shiny_server <- function(session, input, output){
   
   
   # NPS map urls
-
-  NPSbasic = "https://atlas-stg.geoplatform.gov/styles/v1/atlas-user/ck58pyquo009v01p99xebegr9/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoiYXRsYXMtdXNlciIsImEiOiJjazFmdGx2bjQwMDAwMG5wZmYwbmJwbmE2In0.lWXK2UexpXuyVitesLdwUg"
-  
-  NPSimagery = "https://atlas-stg.geoplatform.gov/styles/v1/atlas-user/ck72fwp2642dv07o7tbqinvz4/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoiYXRsYXMtdXNlciIsImEiOiJjazFmdGx2bjQwMDAwMG5wZmYwbmJwbmE2In0.lWXK2UexpXuyVitesLdwUg"
-  
-  NPSslate = "https://atlas-stg.geoplatform.gov/styles/v1/atlas-user/ck5cpvc2e0avf01p9zaw4co8o/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoiYXRsYXMtdXNlciIsImEiOiJjazFmdGx2bjQwMDAwMG5wZmYwbmJwbmE2In0.lWXK2UexpXuyVitesLdwUg"
-  
-  NPSlight = "https://atlas-stg.geoplatform.gov/styles/v1/atlas-user/ck5cpia2u0auf01p9vbugvcpv/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoiYXRsYXMtdXNlciIsImEiOiJjazFmdGx2bjQwMDAwMG5wZmYwbmJwbmE2In0.lWXK2UexpXuyVitesLdwUg"
-
-  
+  ESRIimagery <- "http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+  ESRItopo <- "http://services.arcgisonline.com/arcgis/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
+  ESRINatGeo <- "http://services.arcgisonline.com/arcgis/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}"
+ 
   output$forestMap <- renderLeaflet({
-    leaflet() %>% 
-      setView(lng = -71.6665, lat = 42.5, zoom = 6) %>% 
+    leaflet() |> 
+      setView(lng = -71.6665, lat = 42.5, zoom = 6) |>  
       setMaxBounds(lng1 = -67,
-                   lng2 = -75,
+                   lng2 = -76,
                    lat1 = 46,
-                   lat2 = 39) %>%
-      addTiles(
-        group = "Map",
-        urlTemplate = NPSbasic) %>%
-      addTiles(
-        group = "Imagery",
-        urlTemplate = NPSimagery) %>%
-      addTiles(
-        group = "Light",
-        urlTemplate = NPSlight,
-        options = tileOptions(minZoom = 8)
-      ) %>%
-      addTiles(
-        group = "Slate",
-        urlTemplate = NPSslate,
-        options = tileOptions(minZoom = 8)
-      ) %>%
+                   lat2 = 39) |> 
+      addTiles(group = "Topo", urlTemplate = ESRItopo, options = tileOptions(minZoom = 6)) |> 
+      addTiles(group = "Imagery", urlTemplate = ESRIimagery, options = tileOptions(minZoom = 6)) |> 
+      addTiles(group = "NatGeo", urlTemplate = ESRINatGeo, options = tileOptions(minZoom = 6)) |> 
       addLayersControl(
-        map = .,
-        baseGroups = c("Map", "Imagery", "Light", "Slate"),
+      #  map = .,
+        baseGroups = c("Topo", "Imagery", "NatGeo"),
         options = layersControlOptions(collapsed = T)
       ) 
 
@@ -67,7 +48,7 @@ shiny_server <- function(session, input, output){
   observe({
     req(input$forestMap_zoom)
     
-    leafletProxy("forestMap") %>% 
+    leafletProxy("forestMap") |> 
         addCircleMarkers(
           data = plots,
           radius = 4,
@@ -91,21 +72,21 @@ shiny_server <- function(session, input, output){
   observeEvent(input$plotZoom, {
     req(input$plot)
     
-    plot_selected <- plots %>% filter(Plot_Name == input$plot)
+    plot_selected <- plots |> filter(Plot_Name == input$plot)
     
     output$UR<-renderText({c('<p> Click on a point in the map to view photopoints </p>')})
     output$BR<-renderText({c('<p> </p>')})
     output$BL<-renderText({c('<p> </p>')})
     output$UL<-renderText({c('<p> </p>')})
     
-    leafletProxy('forestMap') %>% 
-      clearControls() %>%
-      #clearPopups() %>% 
+    leafletProxy('forestMap')  |>  
+      clearControls() |> 
+      #clearPopups() |> 
       setView(
         lng =  plot_selected$Long, 
         lat = plot_selected$Lat, 
         zoom = 16) 
-    delay(400, leafletProxy("forestMap") %>% 
+    delay(400, leafletProxy("forestMap")  |>  
             addCircles(
               lng = plot_selected$Long,
               lat = plot_selected$Lat,
@@ -116,7 +97,7 @@ shiny_server <- function(session, input, output){
               fillOpacity = 0,
               weight = 5)) 
     delay(1000, 
-          leafletProxy('forestMap') %>% 
+          leafletProxy('forestMap') |>  
             clearShapes())
   })
   
@@ -136,9 +117,9 @@ shiny_server <- function(session, input, output){
     output$BL <- renderText({c('<p> </p>')})
     output$UL <- renderText({c('<p> </p>')})
     
-    leafletProxy("forestMap") %>% 
-      clearPopups() %>%
-      clearControls() %>% 
+    leafletProxy("forestMap") |>  
+      clearPopups() |> 
+      clearControls()  |>  
       setView(lng = -71.6665, lat = 42.5, zoom = 6) 
     
 
@@ -147,10 +128,10 @@ shiny_server <- function(session, input, output){
   observeEvent(input$park, {
    req(input$park)
    
-   park_coords <- plots %>% filter(Unit_Code %in% input$park) %>% summarize(long = mean(Long),
-                                                                            lat = mean(Lat))  
+   park_coords <- plots |> filter(Unit_Code %in% input$park) |> summarize(long = mean(Long),
+                                                                          lat = mean(Lat))  
    
-   park_plots <- plots %>% filter(Unit_Code %in% input$park) %>% select(Plot_Name) %>% unique()
+   park_plots <- plots |> filter(Unit_Code %in% input$park) |> select(Plot_Name) |> distinct()
    
 
    zoom_level <- case_when(input$park == "ACAD" ~ 9.5,
@@ -163,9 +144,9 @@ shiny_server <- function(session, input, output){
    updateSelectizeInput(session, 'plot',
                         choices = c("Choose a plot" = "", park_plots$Plot_Name))
    
-  leafletProxy('forestMap') %>% 
-     #clearControls() %>% 
-     clearPopups() %>% 
+  leafletProxy('forestMap') |>  
+     #clearControls() |> 
+     clearPopups() |>  
      setView(lng = park_coords$long,
              lat = park_coords$lat, 
              zoom = zoom_level) 
@@ -175,35 +156,35 @@ shiny_server <- function(session, input, output){
   observeEvent(input$plot, {
     req(input$plot)
     
-    plot_selected <- plots %>% filter(Plot_Name %in% input$plot) 
+    plot_selected <- plots |>  filter(Plot_Name %in% input$plot) 
     
-    photoUR <- as.character(plot_selected %>% 
-                             mutate(photoUR = paste0(UR)) %>%  
-                             select(photoUR) %>% droplevels())
+    photoUR <- as.character(plot_selected |> 
+                             mutate(photoUR = paste0(UR)) |>  
+                             select(photoUR))
     
     output$UR <- renderText({c('<img src="', photoUR,'" width="99%"/>')})
     
-    photoBR <- as.character(plot_selected %>%  
-                             mutate(photoBR = paste0(BR)) %>%  
-                             select(photoBR) %>% droplevels())
+    photoBR <- as.character(plot_selected |> 
+                             mutate(photoBR = paste0(BR)) |>  
+                             select(photoBR))
     
     output$BR <- renderText({c('<img src="', photoBR,'" width="99%"/>')})
     
-    photoBL <- as.character(plot_selected %>% 
-                             mutate(photoBL = paste0(BL)) %>%  
-                             select(photoBL) %>% droplevels())
+    photoBL <- as.character(plot_selected |>  
+                             mutate(photoBL = paste0(BL)) |>  
+                             select(photoBL))
     
     output$BL <- renderText({c('<img src="', photoBL,'" width="99%"/>')})
     
-    photoUL <- as.character(plot_selected %>% 
-                             mutate(photoUL = paste0(UL)) %>%  
-                             select(photoUL) %>% droplevels())
+    photoUL <- as.character(plot_selected |>  
+                             mutate(photoUL = paste0(UL)) |>  
+                             select(photoUL))
     
     output$UL <- renderText({c('<img src="', photoUL,'" width="99%"/>')})
     
-    leafletProxy('forestMap') %>% 
-      #clearControls() %>% 
-      #clearPopups() %>% 
+    leafletProxy('forestMap') |>  
+      #clearControls() |>  
+      #clearPopups() |> 
       setView(
         lng =  plot_selected$Long,
         lat = plot_selected$Lat,
@@ -216,9 +197,9 @@ shiny_server <- function(session, input, output){
       MarkerClick <- input$forestMap_marker_click
       plot_click <- plots[plots$Plot_Name == MarkerClick$id, ]
 
-      plots_park <- plots %>% filter(Unit_Code %in% input$park) %>% select(Plot_Name) %>% unique()
+      plots_park <- plots |> filter(Unit_Code %in% input$park) |> select(Plot_Name) |> distinct()
       
-      tempdata <- plot_click %>% select(Plot_Name, Long, Lat, Last_Sampled = SampleYear, Panel, Physio,
+      tempdata <- plot_click  |> select(Plot_Name, Long, Lat, Last_Sampled = SampleYear, Panel, Physio,
                                         Num_Live_Trees, Num_Dead_Trees, Inv_Shrub_Cov, 
                                         Num_Seedlings, Num_Saplings, Num_Quad_Species, 
                                         Num_Add_Species, Location_Notes, Directions)
@@ -247,35 +228,35 @@ shiny_server <- function(session, input, output){
                            choices = c("Choose a plot" = "", unique(plots_park$Plot_Name)),
                            selected = paste(plot_click$Plot_Name))
       
-      photoUR<- as.character(plot_click %>% filter(Plot_Name == MarkerClick$id) %>% 
-                             mutate(photoUR = paste0(UR)) %>%  
-                             select(photoUR) %>% droplevels())
+      photoUR <- as.character(plot_click |> filter(Plot_Name == MarkerClick$id) |>
+                             mutate(photoUR = paste0(UR)) |>   
+                             select(photoUR))
       
       output$UR <- renderText({c('<img src="', photoUR,'" width="99%"/>')})
       
-      photoBR<- as.character(plot_click %>% filter(Plot_Name == MarkerClick$id) %>% 
-                               mutate(photoBR = paste0(BR)) %>%  
-                               select(photoBR) %>% droplevels())
+      photoBR <- as.character(plot_click |> filter(Plot_Name == MarkerClick$id) |> 
+                               mutate(photoBR = paste0(BR)) |>  
+                               select(photoBR))
       
       output$BR <- renderText({c('<img src="', photoBR,'" width="99%"/>')})
       
-      photoBL<- as.character(plot_click %>% filter(Plot_Name == MarkerClick$id) %>% 
-                               mutate(photoBL = paste0(BL)) %>%  
-                               select(photoBL) %>% droplevels())
+      photoBL <- as.character(plot_click |> filter(Plot_Name == MarkerClick$id) |> 
+                               mutate(photoBL = paste0(BL)) |>  
+                               select(photoBL))
       
       output$BL <- renderText({c('<img src="', photoBL,'" width="99%""/>')})
       
-      photoUL<- as.character(plot_click %>% filter(Plot_Name == MarkerClick$id) %>% 
-                               mutate(photoUL = paste0(UL)) %>%  
-                               select(photoUL) %>% droplevels())
+      photoUL<- as.character(plot_click |> filter(Plot_Name == MarkerClick$id) |> 
+                               mutate(photoUL = paste0(UL)) |>  
+                               select(photoUL))
       
       output$UL <- renderText({c('<img src="', photoUL,'" width="99%"/>')})
  
-      leafletProxy('forestMap') %>% 
+      leafletProxy('forestMap') |>  
         setView(
           lng =  tempdata$Long,
           lat = tempdata$Lat,
-          zoom = 16) %>% 
+          zoom = 16) |>  
         addPopups(
           lng = tempdata$Long,
           lat = tempdata$Lat,
